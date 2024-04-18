@@ -1,0 +1,241 @@
+library(devtools)
+#Load the packages. Everyone needs to do this.
+library(tidyverse)
+library(vegan)
+library(qiime2R)
+getwd()
+list.files()
+
+
+metadata2 <- read.delim("metadata_project_updated.txt", sep = "\t", header = T, quote = "", stringsAsFactors = F)
+metadata2[1,]
+metadata2[,1]
+metadata2 <- metadata2[-1,]
+
+
+metadata<-read_q2metadata("metadata_project_updated.txt")
+str(metadata)
+colnames(metadata)[2] <- "Timepoint"
+colnames(metadata)[3] <- "gender"
+colnames(metadata)[4] <- "Treatment"
+colnames(metadata)[5] <- "percent.weightchange"
+str(metadata)
+#metadata <- metadata[,-1]
+row.names(metadata)
+
+#Filter metadata 
+meddiet <- metadata[metadata$treatment == "meddiet", ]
+meddiet$Timepoint <- factor(meddiet$Timepoint, levels = c("T1", "T2"))
+
+
+bc_PCoA<-read_qza("bray_curtis_pcoa_results.qza")
+wUF <- read_qza("weighted_unifrac_pcoa_results.qza")
+UwUF <- read_qza("unweighted_unifrac_pcoa_results.qza")
+JAC <- read_qza("jaccard_pcoa_results.qza")
+
+
+tratement_colors <- c("Blue", "Yellow")
+######
+metadata$Timepoint <- ifelse(metadata$Timepoint == "T1", "Baseline", 
+                         ifelse(metadata$Timepoint == "T2", "Post-Intervention", metadata$Timepoint))
+
+
+bc_meta <- bc_PCoA$data$Vectors %>%
+  select(SampleID, PC1, PC2, PC3) %>%
+  inner_join(metadata, by = c("SampleID" = "SampleID"))
+
+#Filter bc_meta
+#####meddiet
+meddiet <- bc_meta[bc_meta$Treatment == "meddiet", ]
+meddiet$Timepoint <- factor(meddiet$Timepoint, levels = c("Baseline", "Post-Intervention"))
+######weightloss
+weightloss <- bc_meta[bc_meta$Treatment == "weightloss", ]
+weightloss$Timepoint <- factor(weightloss$Timepoint, levels = c("Baseline", "Post-Intervention"))
+
+###meddiet ordination plot
+ggplot(meddiet, aes(x = PC1, y = PC2, color = Timepoint)) + 
+  geom_point(aes(shape = Timepoint)) +
+  stat_ellipse(type = "t", level = 0.95) +  # Add ellipses
+  theme_q2r() +
+  xlab(paste0("PC1 (", round(100 * bc_PCoA$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100 * bc_PCoA$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(name = "Timepoint", values = c("Baseline" = "blue", "Post-Intervention" = "red")) +
+  labs(color = "Timepoint")  # Label the color legend as "Timepoint"
+
+##weightloss ordination plot
+ggplot(weightloss, aes(x = PC1, y = PC2, color = Timepoint)) + 
+  geom_point(aes(shape = Timepoint)) +
+  stat_ellipse(type = "t", level = 0.95) +  # Add ellipses
+  theme_q2r() +
+  xlab(paste0("PC1 (", round(100 * bc_PCoA$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100 * bc_PCoA$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(name = "Timepoint", values = c("Baseline" = "blue", "Post-Intervention" = "red")) +
+  labs(color = "Timepoint")  # Label the color legend as "Timepoint"
+
+
+#weighted unifrac
+UwUF_meta <- wUF$data$Vectors %>%
+  select(SampleID, PC1, PC2, PC3) %>%
+  inner_join(metadata, by = c("SampleID" = "SampleID"))
+
+#Filter wUF_meta
+#####meddiet
+meddiet_wUF <- wUF_meta[wUF_meta$Treatment == "meddiet", ]
+meddiet_wUF$Timepoint <- factor(meddiet$Timepoint, levels = c("Baseline", "Post-Intervention"))
+######weightloss
+weightloss_wUF <- wUF_meta[wUF_meta$Treatment == "weightloss", ]
+weightloss_wUF$Timepoint <- factor(weightloss$Timepoint, levels = c("Baseline", "Post-Intervention"))
+
+###meddiet ordination plot
+ggplot(weightloss_wUF, aes(x = PC1, y = PC2, color = Timepoint)) + 
+  geom_point(aes(shape = Timepoint)) +
+  stat_ellipse(type = "t", level = 0.95) +  # Add ellipses
+  theme_q2r() +
+  xlab(paste0("PC1 (", round(100 * wUF$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100 * wUF$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(name = "Timepoint", values = c("Baseline" = "blue", "Post-Intervention" = "red")) +
+  labs(color = "Timepoint")  # Label the color legend as "Timepoint"
+
+###weightloss ordination plot
+ggplot(meddiet_wUF, aes(x = PC1, y = PC2, color = Timepoint)) + 
+  geom_point(aes(shape = Timepoint)) +
+  stat_ellipse(type = "t", level = 0.95) +  # Add ellipses
+  theme_q2r() +
+  xlab(paste0("PC1 (", round(100 * wUF$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100 * wUF$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(name = "Timepoint", values = c("Baseline" = "blue", "Post-Intervention" = "red")) +
+  labs(color = "Timepoint")  # Label the color legend as "Timepoint"
+
+
+#weighted unifrac
+UwUF_meta <- UwUF$data$Vectors %>%
+  select(SampleID, PC1, PC2, PC3) %>%
+  inner_join(metadata, by = c("SampleID" = "SampleID"))
+
+#Filter UwUF_meta
+#####meddiet
+meddiet_UwUF <- UwUF_meta[UwUF_meta$Treatment == "meddiet", ]
+meddiet_UwUF$Timepoint <- factor(meddiet_UwUF$Timepoint, levels = c("Baseline", "Post-Intervention"))
+######weightloss
+weightloss_UwUF <- UwUF_meta[UwUF_meta$Treatment == "weightloss", ]
+weightloss_UwUF$Timepoint <- factor(weightloss_UwUF$Timepoint, levels = c("Baseline", "Post-Intervention"))
+
+###weightloss ordination plot
+ggplot(weightloss_UwUF, aes(x = PC1, y = PC2, color = Timepoint)) + 
+  geom_point(aes(shape = Timepoint)) +
+  stat_ellipse(type = "t", level = 0.95) +  # Add ellipses
+  theme_q2r() +
+  xlab(paste0("PC1 (", round(100 * UwUF$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100 * UwUF$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(name = "Timepoint", values = c("Baseline" = "blue", "Post-Intervention" = "red")) +
+  labs(color = "Timepoint")  # Label the color legend as "Timepoint"
+
+###meddiet ordination plot
+ggplot(meddiet_UwUF, aes(x = PC1, y = PC2, color = Timepoint)) + 
+  geom_point(aes(shape = Timepoint)) +
+  stat_ellipse(type = "t", level = 0.95) +  # Add ellipses
+  theme_q2r() +
+  xlab(paste0("PC1 (", round(100 * UwUF$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100 * UwUF$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(name = "Timepoint", values = c("Baseline" = "blue", "Post-Intervention" = "red")) +
+  labs(color = "Timepoint")  # Label the color legend as "Timepoint"
+
+
+###Jaccard Ordination plot
+JAC_meta <- JAC$data$Vectors %>%
+  select(SampleID, PC1, PC2, PC3) %>%
+  inner_join(metadata, by = c("SampleID" = "SampleID"))
+
+#Filter JAC_meta
+#####meddiet
+meddiet_JAC <- JAC_meta[JAC_meta$Treatment == "meddiet", ]
+meddiet_JAC$Timepoint <- factor(meddiet$Timepoint, levels = c("Baseline", "Post-Intervention"))
+######weightloss
+weightloss_JAC <- JAC_meta[JAC_meta$Treatment == "weightloss", ]
+weightloss$Timepoint <- factor(weightloss$Timepoint, levels = c("Baseline", "Post-Intervention"))
+
+
+###meddiet ordination plot
+ggplot(meddiet_JAC, aes(x = PC1, y = PC2, color = Timepoint)) + 
+  geom_point(aes(shape = Timepoint)) +
+  stat_ellipse(type = "t", level = 0.95) +  # Add ellipses
+  theme_q2r() +
+  xlab(paste0("PC1 (", round(100 * JAC$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100 * JAC$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(name = "Timepoint", values = c("Baseline" = "blue", "Post-Intervention" = "red")) +
+  labs(color = "Timepoint")  # Label the color legend as "Timepoint"
+
+###weightloss ordination plot
+ggplot(weightloss_JAC, aes(x = PC1, y = PC2, color = Timepoint)) + 
+  geom_point(aes(shape = Timepoint)) +
+  stat_ellipse(type = "t", level = 0.95) +  # Add ellipses
+  theme_q2r() +
+  xlab(paste0("PC1 (", round(100 * JAC$data$ProportionExplained[1], digits = 2), "%)")) +
+  ylab(paste0("PC2 (", round(100 * JAC$data$ProportionExplained[2], digits = 2), "%)")) +
+  scale_color_manual(name = "Timepoint", values = c("Baseline" = "blue", "Post-Intervention" = "red")) +
+  labs(color = "Timepoint")  # Label the color legend as "Timepoint"
+
+
+
+# For the PERMANOVA, if you want to use unweighted UniFrac, you need the distance matrix
+wUF_per <- read_qza("weighted_unifrac_distance_matrix.qza")
+wUF_per <- as.matrix(wUF_per$data) 
+rownames(wUF_per) == metadata$SampleID # all these values need to be "TRUE"
+
+# Subsetting metadata to match distance matrix rownames
+metadata_sub <- metadata[match(rownames(wUF_per), metadata$SampleID),]
+rownames(wUF_per) == metadata_sub$SampleID # all these values need to be "TRUE"
+
+# Perform PERMANOVA using unweighted UniFrac distances
+PERMANOVA_out <- adonis2(wUF_per ~ Timepoint, data = metadata_sub)
+# Perform PERMANOVA using unweighted UniFrac distances
+PERMANOVA_out2 <- adonis2(wUF_per ~ Treatment, data = metadata_sub)
+
+##Unweighted_Unifrac
+UwUF_per <- read_qza("unweighted_unifrac_distance_matrix.qza")
+UwUF_per <- as.matrix(UwUF_per$data) 
+rownames(UwUF_per) == metadata$SampleID # all these values need to be "TRUE"
+
+# Subsetting metadata to match distance matrix rownames
+metadata_sub <- metadata[match(rownames(UwUF_per), metadata$SampleID),]
+rownames(UwUF_per) == metadata_sub$SampleID # all these values need to be "TRUE"
+
+# Perform PERMANOVA using unweighted UniFrac distances
+PERMANOVA_UwUF <- adonis2(UwUF_per ~ Timepoint, data = metadata_sub)
+# Perform PERMANOVA using unweighted UniFrac distances
+PERMANOVA_UwUF2 <- adonis2(UwUF_per ~ Treatment, data = metadata_sub)
+
+##Jaccard
+JAC_per <- read_qza("Jaccard_distance_matrix.qza")
+JAC_per <- as.matrix(JAC_per$data) 
+rownames(JAC_per) == metadata$SampleID # all these values need to be "TRUE"
+
+# Subsetting metadata to match distance matrix rownames
+metadata_sub <- metadata[match(rownames(JAC_per), metadata$SampleID),]
+rownames(JAC_per) == metadata_sub$SampleID # all these values need to be "TRUE"
+
+# Perform PERMANOVA using unweighted UniFrac distances
+PERMANOVA_JAC <- adonis2(JAC_per ~ Timepoint, data = metadata_sub)
+# Perform PERMANOVA using unweighted UniFrac distances
+PERMANOVA_JAC2 <- adonis2(JAC_per ~ Treatment, data = metadata_sub)
+
+
+##Bray Curtis
+bc_per <- read_qza("bray_curtis_distance_matrix.qza")
+bc_per <- as.matrix(bc_per$data) 
+rownames(bc_per) == metadata$SampleID # all these values need to be "TRUE"
+
+# Subsetting metadata to match distance matrix rownames
+metadata_sub <- metadata[match(rownames(bc_per), metadata$SampleID),]
+rownames(bc_per) == metadata_sub$SampleID # all these values need to be "TRUE"
+
+# Perform PERMANOVA using unweighted UniFrac distances
+PERMANOVA_bc <- adonis2(bc_per ~ Timepoint, data = metadata_sub)
+# Perform PERMANOVA using unweighted UniFrac distances
+PERMANOVA_bc2 <- adonis2(bc_per ~ Treatment, data = metadata_sub)
+
+
+
+
+
+
