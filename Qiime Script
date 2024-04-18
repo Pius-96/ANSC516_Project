@@ -1,1 +1,102 @@
 
+#!/bin/sh -l
+
+#SBATCH --nodes=1
+#SBATCH -n 60
+#SBATCH --time=04:00:00
+#SBATCH --job-name pius-project
+#SBATCH -A microbiome
+
+######################################################
+
+#step 1, cd into the proper directory. This directory must already exist
+
+cd /depot/microbiome/data/ANSC516/pius/Project
+
+pwd
+
+#step 2, Load Modules
+
+module load bioinfo
+module load Qiime/2-2023.9
+
+
+#step 1, cd into the proper directory. This directory must already exist
+
+cd /depot/microbiome/data/ANSC516/pius/Project
+
+pwd
+
+#step 2, Load Modules
+
+echo "loading bioinfo"
+module load bioinfo
+
+echo "loading qiime2-2023.9"
+module load Qiime/2-2023.9
+
+
+#import data
+
+qiime tools import \
+   --type 'SampleData[SequencesWithQuality]' \
+   --input-path manifest_2.txt \
+   --output-path demux.qza \
+   --input-format SingleEndFastqManifestPhred33V2
+
+
+#getting dmux.qza output
+qiime demux summarize \
+   --i-data demux.qza \
+   --o-visualization demux.qzv
+
+#DADA2 step (trimming and truncating)
+
+qiime dada2 denoise-single \
+  --i-demultiplexed-seqs demux.qza \
+  --p-trim-left 0 \
+  --p-trunc-len 220 \
+  --o-representative-sequences rep-seqs-dada2.qza \
+  --o-table table-dada2.qza \
+  --o-denoising-stats stats-dada2.qza
+
+#metadata visualization
+
+#moving output files for further analysis
+
+mv rep-seqs-dada2.qza rep-seqs.qza
+mv table-dada2.qza table.qza
+
+
+qiime diversity core-metrics-phylogenetic \
+  --i-phylogeny rooted-tree.qza \
+  --i-table table.qza \
+  --p-sampling-depth 30000 \
+  --m-metadata-file metadata_project.txt \
+  --output-dir core-metrics-results
+
+
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity core-metrics-results/faith_pd_vector.qza \
+  --m-metadata-file metadata_project.txt \
+  --o-visualization core-metrics-results/faith-pd-group-significance.qzv
+
+qiime diversity alpha-group-significance \
+  --i-alpha-diversity core-metrics-results/evenness_vector.qza \
+  --m-metadata-file metadata_project.txt \
+  --o-visualization core-metrics-results/evenness-group-significance.qzv
+
+
+#creating feature tables
+
+qiime feature-table summarize \
+  --i-table table.qza \
+  --o-visualization table.qzv \
+  --m-sample-metadata-file metadata_project.txt
+qiime feature-table tabulate-seqs \
+  --i-data rep-seqs.qza \
+  --o-visualization rep-seqs.qzv
+
+
+
+
